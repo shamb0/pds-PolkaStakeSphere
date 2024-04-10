@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: main
+    tables:
+      - name: raw_stakings
+    meta:
+      dagster:
+        asset_key: ["raw_stakings"]
+      external_location: "{{ env_var('PSS_LHOUSE_LEV0_STAKING_TRANSFORM_METRICS_SOURCE', 'TODO/stakings0/*/*/*.parquet') }}"

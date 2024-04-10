@@ -1,0 +1,19 @@
+stakings0_metrics:
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('PSS_STAKING0_TRANSFORMED_METRICS_SINK', '../../data-vault/db/transform_stakings0.duckdb') }}"
+      threads: 5
+      settings:
+        enable_object_cache: true
+        enable_http_metadata_cache: true
+      pre_hook:
+        - 'INSTALL ''json'''
+    prod:
+      type: duckdb
+      path: "md:"
+  target: dev
+
+config:
+  send_anonymous_usage_stats: False
+  use_colors: True

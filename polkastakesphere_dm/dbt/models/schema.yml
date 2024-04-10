@@ -1,0 +1,16 @@
+
+version: 2
+
+models:
+  - name: staging_stakings0_unnested
+    description: "Stg01 stakings0 unnested"
+  - name: staging_stakings0_aggregated
+    description: "Stg01 stakings0 aggregated"
+  - name: staging_stakings0_eraRaw
+    description: "Stg01 stakings0 eraRaw"
+  - name: staging_stakings0_validators
+    description: "Stg01 stakings0 validators"
+  - name: staging_stakings0_validator_augmented
+    description: "Stg01 stakings0 validator augmented"
+  - name: dim_stakings0_joined
+    description: "Stg01 stakings0 validator joined"

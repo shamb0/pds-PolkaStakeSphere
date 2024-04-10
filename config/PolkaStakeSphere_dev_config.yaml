@@ -1,0 +1,7 @@
+PolkaStakeSphere:
+  gcp_project_id: "bigquery-public-data"
+  gcp_substrate_ds_id: "crypto_polkadot"
+  gcp_materialize_table_id: "crypto_polkadot_etl_export"
+  staking0:
+    gcp_polkadot_staking_table_id: "stakings0"
+    gcp_polkadot_staking_column_ts: "ts"
