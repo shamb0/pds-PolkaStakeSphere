@@ -3,6 +3,7 @@
 *.csv
 *.json
 *.db
+.activate_env
 tmp*
 __pycache__
 target/
@@ -16,3 +17,6 @@ logs/
 **/history
 **/schedules
 **/storage
+**/stakings0
+**/bup**
+**/.cache

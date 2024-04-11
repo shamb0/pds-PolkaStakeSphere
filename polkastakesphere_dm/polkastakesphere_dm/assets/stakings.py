@@ -7,7 +7,10 @@ from .batch_proc import build_substrate_query
 from .batch_proc import process_data
 
 
-@asset(compute_kind="python")
+@asset(
+    compute_kind="python",
+    key_prefix="main"
+)
 def raw_stakings(context: AssetExecutionContext, substrate_etl_cfg: SubstrateStakingResource) -> None:
     params = SubstrateExtractParameters(
         start_date="2024-04-01",

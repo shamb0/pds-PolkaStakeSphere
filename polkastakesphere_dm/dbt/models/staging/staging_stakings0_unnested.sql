@@ -31,6 +31,7 @@ with recursive flattened_targets (nominator, era, ts, date, pv, index, target) a
     from flattened_targets as f
     where json_extract_string(f.pv, '$.targets[' || f.index + 1 || ']') is not null
 ),
+
 final_targets as (
     select
         nominator,

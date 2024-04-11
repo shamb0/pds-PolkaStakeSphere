@@ -7,6 +7,9 @@ from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import coalesce
 from pyspark.sql.functions import col
 from pyspark.sql.functions import concat_ws
+from pyspark.sql.functions import count
+from pyspark.sql.functions import max
+from pyspark.sql.functions import min
 from pyspark.sql.functions import month
 from pyspark.sql.functions import sha2
 from pyspark.sql.functions import to_date
@@ -110,6 +113,68 @@ def update_locallake(
     # Write the transformed and deduplicated data to Parquet files
     df_final.write.partitionBy("year", "month").mode("overwrite").parquet(env_destination_local_path)
 
+def check_is_update_required(
+    context: AssetExecutionContext, params: SubstrateExtractParameters, spark: SparkSession
+) -> bool:
+    env_destination_local_path = os.environ.get("PSS_LHOUSE_LEV0_STAKING_INGESTION_SINK")
+    parquet_files = []
+
+    # Check if env_destination_local_path is a folder
+    if os.path.isdir(env_destination_local_path):
+        # Check if *.parquet files are available in sub-folders
+        parquet_files = [file for root, dirs, files in os.walk(env_destination_local_path) for file in files if file.endswith(".parquet")]
+
+    if not parquet_files:
+        context.log.info("No existing Parquet files found. Update is required.")
+        return True
+    else:
+        # Load the existing DataFrame with the date filter
+        df_pq_existing = spark.read.parquet(env_destination_local_path).filter(
+            f"DATE(ts) >= '{params.start_date}' AND DATE(ts) <= '{params.end_date}'"
+        )
+
+        query_str = f"""
+            SELECT ts
+            FROM `{params.gcp_project}.{params.gcp_dataset}.{params.gcp_table}`
+            WHERE DATE({params.timestamp_column}) >= '{params.start_date}'
+            AND DATE({params.timestamp_column}) <= '{params.end_date}'
+        """
+        df_bq_incoming = spark.read.format("bigquery").option("query", query_str).load()
+
+        # Aggregate the dataset in dataframe `df_pq_existing` and `df_bq_incoming`
+        # based on the column field `params.timestamp_column`
+        # get summary info MAX(ts), MIN(ts), COUNT(*) as num_records
+        df_pq_existing_summary = df_pq_existing.agg(
+            max(params.timestamp_column).alias("max_ts"),
+            min(params.timestamp_column).alias("min_ts"),
+            count("*").alias("num_records")
+        )
+
+        df_bq_incoming_summary = df_bq_incoming.agg(
+            max(params.timestamp_column).alias("max_ts"),
+            min(params.timestamp_column).alias("min_ts"),
+            count("*").alias("num_records")
+        )
+
+        pq_existing_summary = df_pq_existing_summary.collect()[0]
+        bq_incoming_summary = df_bq_incoming_summary.collect()[0]
+
+        context.log.info(
+            f"Summary of existing Parquet data: {pq_existing_summary}"
+        )
+        context.log.info(
+            f"Summary of incoming BigQuery data: {bq_incoming_summary}"
+        )
+
+        # If summary info from both dataframe `df_bq_incoming` and `df_pq_existing` are different
+        # return True, else return False
+        if pq_existing_summary != bq_incoming_summary:
+            context.log.info("Differences found between existing and incoming data. Update is required.")
+            return True
+        else:
+            context.log.info("No differences found between existing and incoming data. Update is not required.")
+            return False
+
 
 def process_data(context: AssetExecutionContext, params: SubstrateExtractParameters, query_str: str):
     try:
@@ -119,12 +184,16 @@ def process_data(context: AssetExecutionContext, params: SubstrateExtractParamet
         conf = SparkConf()
         conf.set("spark.executor.memory", "8g")
         conf.set("spark.driver.memory", "4g")
-        conf.set("spark.executor.cores", "2")
+        conf.set("spark.executor.cores", "1")
         conf.set("spark.dynamicAllocation.enabled", "true")
         conf.set("spark.shuffle.service.enabled", "true")
         conf.set("spark.sql.shuffle.partitions", "300")
         conf.set("spark.sql.autoBroadcastJoinThreshold", "10485760")
         conf.set("spark.executor.extraJavaOptions", "-XX:+UseG1GC")
+        conf.set("spark.task.maxFailures", "10")
+        conf.set("spark.speculation", "true")
+        conf.set("spark.sql.files.maxPartitionBytes", "256MB")
+        conf.set("spark.sql.parquet.mergeSchema", "true")
 
         spark = (
             SparkSession.builder.appName("SubstrateETLPipeline")
@@ -155,6 +224,12 @@ def process_data(context: AssetExecutionContext, params: SubstrateExtractParamet
         spark.conf.set("viewsEnabled", "true")
         spark.conf.set("materializationDataset", params.gcp_materialize_dataset)
         spark.conf.set("spark.sql.debug.maxToStringFields", "1000")
+
+        # Check if an update is required
+        if not check_is_update_required(context, params, spark):
+            context.log.warning("Skipping data update. No changes found in the incoming dataset.")
+            spark.stop()  # Stop the SparkSession before returning early
+            return
 
         # Read data from BigQuery
         table = f"{params.gcp_project}.{params.gcp_dataset}.{params.gcp_table}"
