@@ -1,6 +1,6 @@
 .PHONY: help prepare_environment install_dev_dependencies install_test_dependencies generate_manifest install_py_tools run_development lint_sql_models fix_sql_models format_code view_leaderboard view_validator_status
 
-help:
+help: check_env
 	@echo "Usage:"
 	@echo "  make install_python_tools         - Installs necessary Python package management tools"
 	@echo "  make prepare_environment          - Ensures necessary environment variables are configured"
