@@ -6,6 +6,8 @@ Welcome to PolkaStakeSphere, a pioneering project designed to uncover valuable s
 
 ## Portable Data Stack: Enabling Local Data Analytics
 
+![](./docs/images/001-01-sys-archi.png)
+
 The core principle of PolkaStakeSphere is the "Portable Data Stack." We firmly believe that data analytics should be accessible to everyone, regardless of their resources or technical expertise. With this in mind, we have designed this repository to enable seamless data analytics on your local machine, eliminating the need for expensive cloud infrastructure.
 
 PolkaStakeSphere allows you to set up your own local data warehouse and dive into the fascinating world of Web3 data without the burden of high costs or complex dependencies. Our carefully crafted tools and frameworks enable you to extract, transform, and analyze blockchain data right on your personal computer.
